@@ -1,0 +1,24 @@
+syntax ="proto3";
+
+option go_package = "github.com/justjack1521/mevpatch/internal/manifest";
+
+package manifest;
+
+message Manifest {
+  string version = 1;
+  repeated File files = 2;
+}
+
+message File {
+  string path = 1;
+  string checksum = 2;
+  string download_path = 3;
+  repeated PatchFile patches = 4;
+}
+
+message PatchFile {
+  string version = 1;
+  string checksum = 2;
+  int32 size = 3;
+  string download_path = 4;
+}
