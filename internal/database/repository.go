@@ -39,6 +39,7 @@ func (r *PatchFileRepository) CreateApplicationFile(app string, file *patch.File
 	var args = mevmanifest.CreateApplicationFileParams{
 		Path:        file.NormalPath,
 		Size:        file.Size,
+		Checksum:    file.Checksum,
 		Timestamp:   file.LastModified.Unix(),
 		Application: app,
 	}

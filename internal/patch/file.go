@@ -33,11 +33,11 @@ type File struct {
 }
 
 type InputPatchFile struct {
-	ID            uuid.UUID
-	Version       Version
-	LocalPath     string
-	NormalPath    string
-	PatchFilePath string
+	ID                uuid.UUID
+	Version           Version
+	LocalPath         string
+	NormalPath        string
+	PatchTempFilePath string
 }
 
 type OutputPatchFile struct {
@@ -56,7 +56,7 @@ func (x OutputPatchFile) ToString() string {
 
 func NewOutputPatchFile(ctx *Context, input InputPatchFile) (OutputPatchFile, error) {
 
-	file, err := os.Open(input.PatchFilePath)
+	file, err := os.Open(input.PatchTempFilePath)
 	if err != nil {
 		return OutputPatchFile{}, err
 	}
@@ -83,7 +83,7 @@ func NewOutputPatchFile(ctx *Context, input InputPatchFile) (OutputPatchFile, er
 		ID:                input.ID,
 		Version:           input.Version,
 		NormalPath:        input.NormalPath,
-		PatchFileTempPath: input.PatchFilePath,
+		PatchFileTempPath: input.PatchTempFilePath,
 		DownloadPath:      download,
 		Checksum:          checksum,
 		Size:              stats.Size(),
@@ -147,7 +147,7 @@ func (f *File) FindPreviousFileVersion(configuration Configuration, version Vers
 		LocalPath:  path,
 		NormalPath: f.NormalPath,
 	}
-	result.PatchFilePath = f.CreatePatchFilePath(configuration, result)
+	result.PatchTempFilePath = f.CreatePatchFilePath(configuration, result)
 	return result, nil
 
 }

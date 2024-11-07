@@ -3,7 +3,7 @@ module github.com/justjack1521/mevpatch
 go 1.22.3
 
 require (
-	github.com/justjack1521/mevmanifest v0.0.0-20241107045535-3d2813da168e
+	github.com/justjack1521/mevmanifest v0.0.0-20241107124547-c3d14977ebb2
 	github.com/prometheus-community/pro-bing v0.4.1
 	github.com/stretchr/testify v1.9.0
 	gopkg.in/yaml.v3 v3.0.1

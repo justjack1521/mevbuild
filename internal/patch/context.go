@@ -99,7 +99,7 @@ func (c *Context) CreatePatchFiles() error {
 			var input = diff.File{
 				OriginFilePath: patch.LocalPath,
 				NewFilePath:    file.LocalPath,
-				PatchFilePath:  patch.PatchFilePath,
+				PatchFilePath:  patch.PatchTempFilePath,
 			}
 
 			if err := differ.CreateBinaryDiff(input); err != nil {

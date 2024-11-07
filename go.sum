@@ -22,6 +22,8 @@ github.com/justjack1521/mevmanifest v0.0.0-20241106110821-2ff4585cdfff h1:EcI+kU
 github.com/justjack1521/mevmanifest v0.0.0-20241106110821-2ff4585cdfff/go.mod h1:gAZQtX9Pt4jkPn97nPJ2rQhyxoXHQBNeytUO+jFUmZg=
 github.com/justjack1521/mevmanifest v0.0.0-20241107045535-3d2813da168e h1:iXGl98jSlRt//Jcy+sFlCAeC6OrJYciD3Fh1LtrQ3dM=
 github.com/justjack1521/mevmanifest v0.0.0-20241107045535-3d2813da168e/go.mod h1:gAZQtX9Pt4jkPn97nPJ2rQhyxoXHQBNeytUO+jFUmZg=
+github.com/justjack1521/mevmanifest v0.0.0-20241107124547-c3d14977ebb2 h1:Rch5UuK7EfYBvPRS6zR4af6MGs2Jid5zYx3E4HH4POI=
+github.com/justjack1521/mevmanifest v0.0.0-20241107124547-c3d14977ebb2/go.mod h1:gAZQtX9Pt4jkPn97nPJ2rQhyxoXHQBNeytUO+jFUmZg=
 github.com/mattn/go-isatty v0.0.20 h1:xfD0iDuEKnDkl03q4limB+vH+GxLEtL/jb4xVJSWWEY=
 github.com/mattn/go-isatty v0.0.20/go.mod h1:W+V8PltTTMOvKvAeJH7IuucS94S2C6jfK/D7dTCTo3Y=
 github.com/ncruces/go-strftime v0.1.9 h1:bY0MQC28UADQmHmaF5dgpLmImcShSi2kHU9XLdhx/f4=

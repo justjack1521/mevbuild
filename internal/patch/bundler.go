@@ -120,6 +120,8 @@ func (b *Bundler) BundlePatchFile(c Configuration, w *zip.Writer, output OutputP
 		return 0, err
 	}
 
+	os.Remove(output.PatchFileTempPath)
+
 	return count, nil
 
 }
