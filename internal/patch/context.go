@@ -11,15 +11,16 @@ import (
 
 type Context struct {
 	Version       Version
+	Previous      []Version
 	Configuration Configuration
 	Files         []*File
 }
 
-func NewContext(version Version, configuration Configuration) (*Context, error) {
+func NewContext(configuration Configuration, target Version, previous []Version) (*Context, error) {
 
 	var paths = make([]string, 0)
 
-	var current = filepath.Join(configuration.SourceInputPath(), version.ToString())
+	var current = filepath.Join(configuration.SourceInputPath(), target.ToString())
 
 	if err := filepath.WalkDir(current, func(path string, d fs.DirEntry, err error) error {
 		if d.IsDir() == false {
@@ -30,9 +31,19 @@ func NewContext(version Version, configuration Configuration) (*Context, error) 
 		panic(err)
 	}
 
+	var actual = make([]Version, 0)
+	for _, pre := range previous {
+		var path = filepath.Join(configuration.SourceInputPath(), pre.ToString())
+		if _, err := os.Stat(path); err != nil {
+			continue
+		}
+		actual = append(actual, pre)
+	}
+
 	var ctx = &Context{
 		Configuration: configuration,
-		Version:       version,
+		Version:       target,
+		Previous:      actual,
 		Files:         make([]*File, len(paths)),
 	}
 
@@ -48,8 +59,34 @@ func NewContext(version Version, configuration Configuration) (*Context, error) 
 
 }
 
-func (f *File) CreatePathFilePath(c Configuration, input InputPatchFile) string {
-	return filepath.Join(c.SourceOutputPath(), "patch", f.NormalPath, fmt.Sprintf("%s_%s.%s", input.Version.ToString(), f.Version.ToString(), c.Suffix))
+func (f *File) CreatePatchFileName(c Configuration, input InputPatchFile) string {
+	return fmt.Sprintf("%s_%s_%s.%s", f.NormalPath, input.Version.ToString(), f.Version.ToString(), c.Suffix)
+}
+
+func (f *File) CreatePatchFilePath(c Configuration, input InputPatchFile) string {
+	return filepath.Join(c.SourceOutputPath(), "patch", "temp", f.Version.ToString(), f.NormalPath, f.CreatePatchFileName(c, input))
+}
+
+func (c *Context) NewBundler() *Bundler {
+
+	var bundler = &Bundler{
+		Configuration: c.Configuration,
+		Target:        c.Version,
+		Patches:       make(map[Version][]OutputPatchFile),
+	}
+
+	for _, previous := range c.Previous {
+		bundler.Patches[previous] = make([]OutputPatchFile, 0)
+	}
+
+	for _, file := range c.Files {
+		for _, p := range file.OutputFiles {
+			bundler.Patches[p.Version] = append(bundler.Patches[p.Version], p)
+		}
+	}
+
+	return bundler
+
 }
 
 func (c *Context) CreatePatchFiles() error {
@@ -83,13 +120,13 @@ func (c *Context) CreatePatchFiles() error {
 
 }
 
-func (c *Context) MountPrePatchFiles(versions []Version) error {
+func (c *Context) MountPrePatchFiles() error {
 
 	var counter int
 	var skipped int
 
 	for _, file := range c.Files {
-		for _, version := range versions {
+		for _, version := range c.Previous {
 			previous, err := file.FindPreviousFileVersion(c.Configuration, version)
 			if err != nil {
 				if errors.Is(err, os.ErrNotExist) {
@@ -103,8 +140,8 @@ func (c *Context) MountPrePatchFiles(versions []Version) error {
 		}
 	}
 
-	fmt.Println(fmt.Sprintf("%d files skipped for patching across %d versions", skipped, len(versions)))
-	fmt.Println(fmt.Sprintf("%d files mounted for patching across %d versions", counter, len(versions)))
+	fmt.Println(fmt.Sprintf("%d files skipped for patching across %d versions", skipped, len(c.Previous)))
+	fmt.Println(fmt.Sprintf("%d files mounted for patching across %d versions", counter, len(c.Previous)))
 
 	return nil
 

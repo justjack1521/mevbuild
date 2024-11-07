@@ -4,11 +4,13 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	uuid "github.com/satori/go.uuid"
 	"io"
 	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 var (
@@ -18,17 +20,20 @@ var (
 )
 
 type File struct {
+	ID           uuid.UUID
 	Version      Version
 	LocalPath    string
 	NormalPath   string
 	DownloadPath string
 	Checksum     string
 	Size         int64
+	LastModified time.Time
 	InputFiles   []InputPatchFile
 	OutputFiles  []OutputPatchFile
 }
 
 type InputPatchFile struct {
+	ID            uuid.UUID
 	Version       Version
 	LocalPath     string
 	NormalPath    string
@@ -36,15 +41,17 @@ type InputPatchFile struct {
 }
 
 type OutputPatchFile struct {
-	Version       Version
-	PatchFilePath string
-	Checksum      string
-	DownloadPath  string
-	Size          int64
+	ID                uuid.UUID
+	Version           Version
+	NormalPath        string
+	PatchFileTempPath string
+	Checksum          string
+	DownloadPath      string
+	Size              int64
 }
 
 func (x OutputPatchFile) ToString() string {
-	return fmt.Sprintf("[Path: %s] [Version: %s] [Checksum: %s] [Size: %d]", x.PatchFilePath, x.Version.ToString(), x.Checksum, x.Size)
+	return fmt.Sprintf("[Path: %s] [Version: %s] [Checksum: %s] [Size: %d]", x.PatchFileTempPath, x.Version.ToString(), x.Checksum, x.Size)
 }
 
 func NewOutputPatchFile(ctx *Context, input InputPatchFile) (OutputPatchFile, error) {
@@ -73,11 +80,13 @@ func NewOutputPatchFile(ctx *Context, input InputPatchFile) (OutputPatchFile, er
 	}
 
 	return OutputPatchFile{
-		Version:       input.Version,
-		PatchFilePath: input.PatchFilePath,
-		DownloadPath:  download,
-		Checksum:      checksum,
-		Size:          stats.Size(),
+		ID:                input.ID,
+		Version:           input.Version,
+		NormalPath:        input.NormalPath,
+		PatchFileTempPath: input.PatchFilePath,
+		DownloadPath:      download,
+		Checksum:          checksum,
+		Size:              stats.Size(),
 	}, nil
 
 }
@@ -88,23 +97,15 @@ func (f *File) ToString() string {
 
 func NewFile(ctx *Context, path string) (*File, error) {
 
-	file, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-
-	stats, err := file.Stat()
+	stats, err := os.Stat(path)
 	if err != nil {
 		return nil, err
 	}
 
-	var hash = sha256.New()
-	if _, err := io.Copy(hash, file); err != nil {
+	checksum, err := GetChecksum(path)
+	if err != nil {
 		return nil, err
 	}
-
-	var checksum = hex.EncodeToString(hash.Sum(nil))
 
 	var normalised = filepath.ToSlash(path)
 	var marker = ctx.Version.ToString()
@@ -122,12 +123,14 @@ func NewFile(ctx *Context, path string) (*File, error) {
 	}
 
 	return &File{
+		ID:           uuid.NewV4(),
 		Version:      ctx.Version,
 		LocalPath:    path,
 		NormalPath:   normal,
 		DownloadPath: download,
 		Checksum:     checksum,
 		Size:         stats.Size(),
+		LastModified: stats.ModTime().UTC(),
 	}, nil
 
 }
@@ -138,13 +141,13 @@ func (f *File) FindPreviousFileVersion(configuration Configuration, version Vers
 	if err != nil {
 		return InputPatchFile{}, err
 	}
-	var output = InputPatchFile{
-		Version:   version,
-		LocalPath: path,
+	var result = InputPatchFile{
+		ID:         f.ID,
+		Version:    version,
+		LocalPath:  path,
+		NormalPath: f.NormalPath,
 	}
-
-	output.PatchFilePath = f.CreatePathFilePath(configuration, output)
-
-	return output, nil
+	result.PatchFilePath = f.CreatePatchFilePath(configuration, result)
+	return result, nil
 
 }

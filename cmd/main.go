@@ -1,27 +1,27 @@
 package main
 
 import (
-	"encoding/json"
+	"database/sql"
 	"flag"
 	"fmt"
+	"github.com/justjack1521/mevpatch/internal/database"
 	"github.com/justjack1521/mevpatch/internal/manifest"
 	"github.com/justjack1521/mevpatch/internal/patch"
-	"os"
-	"path/filepath"
+	_ "modernc.org/sqlite"
 )
 
 func main() {
 
-	var p string
+	var t string
 	var v string
 	var n int
 
-	flag.StringVar(&p, "p", "", "patch profile name")
+	flag.StringVar(&t, "t", "", "target application name")
 	flag.StringVar(&v, "v", "", "current patch target version")
 	flag.IntVar(&n, "n", 5, "number of historic versions to include")
 	flag.Parse()
 
-	configuration, err := patch.NewConfiguration(p)
+	configuration, err := patch.NewConfiguration(t)
 	if err != nil {
 		panic(err)
 	}
@@ -50,39 +50,56 @@ func main() {
 		fmt.Println(fmt.Sprintf("- %s", prev.ToString()))
 	}
 
-	ctx, err := patch.NewContext(version, configuration)
+	ctx, err := patch.NewContext(configuration, version, previous)
 	if err != nil {
 		panic(err)
 	}
 
 	fmt.Println(fmt.Sprintf("%d files found in version %s", len(ctx.Files), ctx.Version.ToString()))
 
-	if err := ctx.MountPrePatchFiles(previous); err != nil {
-		fmt.Println(err)
+	if err := ctx.MountPrePatchFiles(); err != nil {
+		panic(err)
 	}
 
 	if err := ctx.CreatePatchFiles(); err != nil {
-		fmt.Println(err)
+		panic(err)
 	}
 
-	var m = &manifest.Manifest{Version: ctx.Version.ToString()}
+	var bundler = ctx.NewBundler()
 
-	m.Files = make([]*manifest.File, len(ctx.Files))
-
-	for i, file := range ctx.Files {
-		m.Files[i] = manifest.NewFile(file)
-	}
-
-	file, err := os.Create(filepath.Join(ctx.Configuration.SourceOutputPath(), "manifest.json"))
+	bundles, err := bundler.BuildPatchFiles()
 	if err != nil {
 		panic(err)
 	}
-	defer file.Close()
 
-	var encoder = json.NewEncoder(file)
-	encoder.SetIndent("", "	")
-	if err := encoder.Encode(m); err != nil {
+	if err := manifest.CreateManifestFile(ctx, bundles); err != nil {
 		panic(err)
+	}
+
+	path, err := database.CreateDatabaseFile(ctx.Version, ctx.Configuration)
+	if err != nil {
+		panic(err)
+	}
+
+	db, err := sql.Open("sqlite", path)
+	if err != nil {
+		panic(err)
+	}
+	defer db.Close()
+
+	var repository = database.NewPatchFileRepository(db)
+	if err := repository.Initialise(); err != nil {
+		panic(err)
+	}
+
+	if err := repository.CreateApplicationVersion(t, version); err != nil {
+		panic(err)
+	}
+
+	for _, file := range ctx.Files {
+		if err := repository.CreateApplicationFile(t, file); err != nil {
+			panic(err)
+		}
 	}
 
 }
